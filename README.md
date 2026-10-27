@@ -2,7 +2,7 @@
 
 Fast public review, weighted by who actually knows the field.
 
-**Live demo:** https://MY-USERNAME.github.io/quorum-demo
+**Live demo:** https://ninamarie-zinke.github.io/quorum-demo
 *(All people, reviews, and results are synthetic.)*
 
 Built at the Claude Impact Lab: Biotech & Life Sciences (San Diego, Oct 26, 2026), Track 2: in silico testing and discovery.
