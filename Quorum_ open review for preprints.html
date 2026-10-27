@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quorum: open review for preprints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBFAFD; --surface:#FFFFFF; --ink:#1E1B2E; --muted:#625E78; --line:#E3E0EC;
+  --hema:#3D3A8C; --hema-soft:#E6E5F5; --eosin:#C9496A; --eosin-soft:#F8E3E9;
+  --good:#2F7D5B; --good-soft:#E2F2EA; --on-accent:#FFFFFF;
+  --serif:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --sans:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15131F; --surface:#1E1B2B; --ink:#ECEAF4; --muted:#A6A2BA; --line:#312D44;
+    --hema:#9C98EE; --hema-soft:#2A2850; --eosin:#F08AA3; --eosin-soft:#43232E;
+    --good:#6FCB9F; --good-soft:#1D3A2D; --on-accent:#15131F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15131F; --surface:#1E1B2B; --ink:#ECEAF4; --muted:#A6A2BA; --line:#312D44;
+  --hema:#9C98EE; --hema-soft:#2A2850; --eosin:#F08AA3; --eosin-soft:#43232E;
+  --good:#6FCB9F; --good-soft:#1D3A2D; --on-accent:#15131F; color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.internal [data-only="public"], .public [data-only="internal"]{display:none !important}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--hema);outline-offset:2px;border-radius:4px}
+
+.mast{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.brand{font-family:var(--serif);font-weight:700;font-size:1.5rem;letter-spacing:-.01em}
+.brand small{font-family:var(--sans);font-weight:400;font-size:.9rem;color:var(--muted);margin-left:10px}
+.mast-r{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.synthetic{font-size:.85rem;color:var(--muted)}
+
+.paper{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:40px;padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.paper .src{font-size:.9rem;color:var(--muted);margin:0 0 10px}
+.paper h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,3.4vw,2.6rem);line-height:1.15;letter-spacing:-.015em;margin:0 0 10px;max-width:22ch}
+.authors{font-family:var(--serif);font-size:1.02rem;margin:0 0 4px}
+.authors .ack{color:var(--good);font-weight:600}
+.ack-note{font-size:.82rem;color:var(--muted);margin:0 0 16px;min-height:1.2em}
+.paper .abs{font-family:var(--serif);font-size:1.05rem;line-height:1.65;color:var(--muted);max-width:62ch;margin:0}
+.claims h2{font-size:1rem;font-weight:600;margin:0 0 12px}
+.claim{display:grid;grid-template-columns:2.4rem 1fr;gap:4px 10px;padding:12px 0;border-top:1px solid var(--line)}
+.claim b{font-weight:600;color:var(--hema)}
+.claim p{margin:0;font-family:var(--serif);line-height:1.5}
+
+.flow{list-style:none;margin:0 0 36px;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.flow li{padding:12px 14px;border-left:1px solid var(--line);font-size:.86rem}
+.flow li:first-child{border-left:0}
+.flow b{display:block;font-weight:600;font-size:.92rem;margin-bottom:2px}
+.flow b span{color:var(--hema);margin-right:6px;font-variant-numeric:tabular-nums}
+.flow em{font-style:normal;color:var(--muted)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:36px;align-items:start}
+aside{position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.sec-h h2{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin:0}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 12px;min-height:40px;border-radius:7px;cursor:pointer;font-size:.9rem;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--hema);color:var(--on-accent)}
+.method-note{font-size:.9rem;color:var(--muted);margin:-4px 0 16px}
+
+.feed{list-style:none;margin:0;padding:0}
+.c{display:grid;grid-template-columns:2.8rem minmax(0,1fr) 4.4rem;gap:0 14px;padding:18px 0;border-top:1px solid var(--line)}
+.c.top{background:linear-gradient(90deg,var(--hema-soft),transparent 70%)}
+.c.isnew{background:linear-gradient(90deg,var(--good-soft),transparent 70%)}
+.vote{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vote button{width:36px;height:32px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;display:grid;place-items:center;color:var(--muted)}
+.vote button:hover{border-color:var(--line)}
+.vote button svg{width:18px;height:18px}
+.vote button.up[aria-pressed="true"]{color:var(--hema);background:var(--hema-soft)}
+.vote button.down[aria-pressed="true"]{color:var(--eosin);background:var(--eosin-soft)}
+.vote .net{font-weight:700;font-size:.95rem;font-variant-numeric:tabular-nums}
+.vote .net.pos{color:var(--hema)} .vote .net.neg{color:var(--eosin)}
+.who{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.who strong{font-weight:600}
+.who span{color:var(--muted);font-size:.9rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+.chip{font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:5px}
+.chip.support{background:var(--hema-soft);color:var(--hema)}
+.chip.challenge{background:var(--eosin-soft);color:var(--eosin)}
+.chip.question{color:var(--muted);border:1px solid var(--line)}
+.chip.unv{color:var(--eosin);border:1px solid var(--eosin)}
+.chip.accepted{background:var(--good-soft);color:var(--good)}
+.chip.declined{color:var(--muted);border:1px dashed var(--line)}
+dl.rv{margin:0;display:grid;grid-template-columns:8.5rem minmax(0,1fr);gap:4px 12px;max-width:68ch}
+dl.rv dt{font-size:.82rem;color:var(--muted);padding-top:2px}
+dl.rv dd{margin:0;font-family:var(--serif);line-height:1.5}
+dl.rv dd.empty{font-family:var(--sans);font-size:.85rem;color:var(--muted);font-style:italic}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted);margin-top:8px}
+.meta .ok{color:var(--good)}
+.score{text-align:right}
+.score .rk{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.c.top .score .rk{color:var(--hema);font-weight:600}
+.score .n{font-family:var(--serif);font-size:1.6rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.score .l{font-size:.75rem;color:var(--muted)}
+.row-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+details.math{font-size:.88rem}
+details.math summary{cursor:pointer;color:var(--hema);font-weight:500;min-height:32px;display:inline-flex;align-items:center}
+.math table{border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}
+.math td{padding:3px 14px 3px 0;color:var(--muted)}
+.math td:last-child{color:var(--ink);text-align:right;padding-right:0}
+.math tr.tot td{border-top:1px solid var(--line);color:var(--ink);font-weight:600}
+.decide{display:flex;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:500;font-size:.9rem}
+.btn:hover{border-color:var(--hema)}
+.btn.primary{background:var(--hema);border-color:var(--hema);color:var(--on-accent)}
+.btn.accept[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:var(--on-accent)}
+.btn.decline[aria-pressed="true"]{background:var(--muted);border-color:var(--muted);color:var(--on-accent)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+.panel h3{font-size:1rem;font-weight:600;margin:0 0 4px}
+.panel .sub{font-size:.86rem;color:var(--muted);margin:0 0 14px}
+.test-row{display:grid;grid-template-columns:7.5rem 1fr 2.6rem;gap:10px;align-items:center;margin:10px 0;font-size:.9rem}
+.test-row.cur{font-weight:600}
+.dots{display:flex;gap:5px}
+.dots i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);display:block}
+.dots i.hit{background:var(--good);border-color:var(--good)}
+.test-row .frac{text-align:right;font-variant-numeric:tabular-nums}
+.callout{font-size:.86rem;color:var(--muted);border-left:3px solid var(--eosin);padding:4px 0 4px 10px;margin:12px 0 0}
+.slider{margin:14px 0}
+.slider label{display:flex;justify-content:space-between;gap:8px;font-size:.9rem;font-weight:500;margin-bottom:4px}
+.slider label span{color:var(--muted);font-variant-numeric:tabular-nums}
+.slider input{width:100%;accent-color:var(--hema);min-height:28px}
+.slider p{margin:2px 0 0;font-size:.8rem;color:var(--muted)}
+.factor{padding:10px 0;border-top:1px solid var(--line);font-size:.88rem}
+.factor:first-of-type{border-top:0;padding-top:0}
+.factor b{display:block;font-weight:600}
+.factor span{color:var(--muted)}
+
+.block{margin-top:48px;padding-top:32px;border-top:1px solid var(--line)}
+.intro{color:var(--muted);max-width:68ch;margin:-4px 0 18px}
+
+.form{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:start}
+.public .form{grid-template-columns:minmax(0,1fr);max-width:820px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f.full{grid-column:1/-1}
+.f label,.f legend{font-size:.88rem;font-weight:600}
+.f small{color:var(--muted);font-size:.8rem;font-weight:400}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;min-height:42px}
+.f textarea{min-height:76px;resize:vertical;font-family:var(--serif);line-height:1.5}
+fieldset.f{border:0;padding:0;margin:0}
+.radios{display:flex;gap:8px;flex-wrap:wrap}
+.radios label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:42px;cursor:pointer;font-weight:500;background:var(--surface)}
+.radios input{accent-color:var(--hema)}
+.form-msg{font-size:.9rem;min-height:1.4em;margin:10px 0 0}
+.form-msg.err{color:var(--eosin)} .form-msg.ok{color:var(--good)}
+pre.schema{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;font-size:.82rem;line-height:1.55;overflow-x:auto;font-family:'SF Mono','Fira Code',Consolas,'Courier New',monospace}
+.schema-h{font-size:1rem;font-weight:600;margin:0 0 4px}
+.schema-p{font-size:.86rem;color:var(--muted);margin:0 0 12px}
+
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table.h{border-collapse:collapse;width:100%;min-width:820px}
+table.h th{text-align:left;font-size:.85rem;font-weight:600;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--line)}
+table.h td{padding:16px 14px;border-bottom:1px solid var(--line);vertical-align:top;font-size:.93rem}
+table.h tr:last-child td{border-bottom:0}
+table.h td.claimcell{font-family:var(--serif);max-width:240px}
+.he{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--line);min-width:140px;margin:4px 0 6px}
+.he .s{background:var(--hema)} .he .x{background:var(--eosin)}
+.he-l{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.status{font-weight:600}
+.status.Contested{color:var(--eosin)} .status.Supported{color:var(--hema)} .status.Split{color:var(--muted)}
+.nexthyp{font-family:var(--serif)}
+.from{display:block;font-size:.8rem;color:var(--muted);margin-top:4px;font-family:var(--sans)}
+.copyrow{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.copied{font-size:.88rem;color:var(--good);min-width:5rem;text-align:right}
+
+.export-ctl{display:flex;flex-wrap:wrap;gap:16px;align-items:end;margin-bottom:14px}
+.export-ctl .slider{margin:0;min-width:260px;flex:1}
+.export-stats{font-size:.9rem;color:var(--muted)}
+pre.out{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;font-size:.82rem;line-height:1.55;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:'SF Mono','Fira Code',Consolas,'Courier New',monospace}
+
+.limits{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:36px}
+.limits h2{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin:0 0 8px}
+.limits > div > p{color:var(--muted);margin:0}
+.limits ul{margin:0;padding-left:1.1rem}
+.limits li{margin:0 0 10px;max-width:66ch}
+.limits li b{font-weight:600}
+.foot{margin-top:40px;font-size:.82rem;color:var(--muted)}
+
+@media (max-width: 960px){
+  .paper,.form{grid-template-columns:1fr;gap:24px}
+  .grid{grid-template-columns:1fr}
+  aside{position:static;order:-1}
+  .limits{grid-template-columns:1fr;gap:16px}
+  .flow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow li:nth-child(4){border-left:0}
+  .flow li:nth-child(n+4){border-top:1px solid var(--line)}
+}
+@media (max-width: 560px){
+  .c{grid-template-columns:2.4rem minmax(0,1fr) 3.4rem;gap:0 10px}
+  .score .n{font-size:1.3rem}
+  dl.rv{grid-template-columns:1fr}
+  dl.rv dt{padding-top:6px}
+  .fgrid{grid-template-columns:1fr}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .flow li:nth-child(4){border-left:1px solid var(--line)}
+  .flow li:nth-child(odd){border-left:0}
+  .flow li:nth-child(n+3){border-top:1px solid var(--line)}
+  .seg button{padding:8px 9px;font-size:.84rem}
+}
+</style>
+</head>
+<body class="public">
+<div class="wrap">
+
+  <header class="mast">
+    <div class="brand">Quorum <small>Fast public review, weighted by who actually knows the field</small></div>
+    <div class="mast-r">
+      <span class="synthetic">Demo data is synthetic</span>
+      <div class="seg" role="group" aria-label="Viewing as">
+        <button type="button" data-view="reader" aria-pressed="true">Reader view</button>
+        <button type="button" data-view="author" aria-pressed="false">Author view</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="paper" aria-labelledby="ptitle">
+    <div>
+      <p class="src">Preprint posted 2 days ago</p>
+      <h1 id="ptitle">Senolytic compound QZ-17 restores muscle regeneration in aged mice</h1>
+      <p class="authors" id="authors"></p>
+      <p class="ack-note" id="ackNote"></p>
+      <p class="abs">Aged mice (24 months) received QZ-17 or vehicle for four weeks before a standard muscle injury model. Treated mice showed fewer senescent cells in muscle and larger regenerating fibers 14 days after injury. The authors propose that QZ-17 works by rescuing muscle stem cell function.</p>
+    </div>
+    <div class="claims">
+      <h2>Claims the community is reviewing</h2>
+      <div id="claimList"></div>
+    </div>
+  </section>
+
+  <ol class="flow" aria-label="How a review moves through Quorum">
+    <li><b><span>1</span>Structure</b><em>Reviewer fills the six-field form</em></li>
+    <li><b><span>2</span>Score</b><em>Expertise, topic match, substance</em></li>
+    <li><b><span>3</span>Rank</b><em>Credibility first, votes shown alongside</em></li>
+    <li><b><span>4</span>Synthesize</b><em>Claims become testable hypotheses</em></li>
+    <li><b><span>5</span>Send</b><em>Author gets a revision packet</em></li>
+    <li><b><span>6</span>Credit</b><em>Accepted reviewers join the paper with *</em></li>
+  </ol>
+
+  <div class="grid">
+    <main>
+      <div class="sec-h">
+        <h2>Public reviews</h2>
+        <div class="seg" role="group" aria-label="Rank reviews by">
+          <button type="button" data-m="cred" aria-pressed="true">Credibility</button>
+          <button type="button" data-m="h" aria-pressed="false" data-only="internal">Raw H-index</button>
+          <button type="button" data-m="votes" aria-pressed="false">Net votes</button>
+        </div>
+      </div>
+      <p class="method-note" id="methodNote"></p>
+      <ol class="feed" id="feed"></ol>
+    </main>
+
+    <aside>
+      <div class="panel" data-only="internal">
+        <h3>Self-test</h3>
+        <p class="sub">Our 12 seed reviews include 5 the team wrote as strong and evidence-backed. Does each method put those 5 at the top? Reviews you add are left out of this test.</p>
+        <div id="tests"></div>
+        <p class="callout" id="testNote"></p>
+      </div>
+      <div class="panel" data-only="internal">
+        <h3>Scoring weights</h3>
+        <p class="sub">Votes are shown but never enter the credibility score. Weights are rescaled to total 100%.</p>
+        <div class="slider">
+          <label for="wE">Expertise (field-normalized RCR) <span id="vE"></span></label>
+          <input type="range" id="wE" min="0" max="100" value="35">
+          <p>Median RCR, capped at 3x the field average</p>
+        </div>
+        <div class="slider">
+          <label for="wT">Topic match <span id="vT"></span></label>
+          <input type="range" id="wT" min="0" max="100" value="35">
+          <p>How close the reviewer’s own papers are to this one</p>
+        </div>
+        <div class="slider">
+          <label for="wS">Review substance <span id="vS"></span></label>
+          <input type="range" id="wS" min="0" max="100" value="30">
+          <p>Cites evidence, targets a specific claim, proposes a test</p>
+        </div>
+        <button class="btn" type="button" id="reset">Reset to 35 / 35 / 30</button>
+      </div>
+      <div class="panel" data-only="public">
+        <h3>How reviews are ranked</h3>
+        <p class="sub">Credibility combines three signals. Votes are shown but don’t change it.</p>
+        <div class="factor"><b>Field expertise</b><span>Citation impact compared to others in the same field, so niche experts aren’t penalized</span></div>
+        <div class="factor"><b>Topic match</b><span>Whether the reviewer has published on this specific subject</span></div>
+        <div class="factor"><b>Review substance</b><span>Evidence cited, a specific claim targeted and a testable proposal</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="block" aria-labelledby="formH">
+    <div class="sec-h"><h2 id="formH">Write a structured review</h2></div>
+    <p class="intro">Every review uses the same six fields, so authors and the AI pipeline never have to guess what a reviewer meant. Empty fields lower the substance score and show up as gaps.</p>
+    <div class="form">
+      <form id="rform" novalidate>
+        <div class="fgrid">
+          <div class="f"><label for="fName">Your name</label><input id="fName" autocomplete="name" placeholder="e.g. Jamie Lee"></div>
+          <div class="f"><label for="fRole">Role <small>optional</small></label><input id="fRole" placeholder="e.g. Postdoc, muscle biology"></div>
+          <div class="f"><label for="fClaim">1. Claim reviewed</label>
+            <select id="fClaim"><option value="">Choose a claim</option></select></div>
+          <fieldset class="f"><legend>2. Stance</legend>
+            <div class="radios">
+              <label><input type="radio" name="stance" value="support"> Supports</label>
+              <label><input type="radio" name="stance" value="challenge" checked> Challenges</label>
+              <label><input type="radio" name="stance" value="question"> Questions</label>
+            </div></fieldset>
+          <div class="f full"><label for="fPoint">3. Point <small>your concern or support, in one or two sentences</small></label><textarea id="fPoint"></textarea></div>
+          <div class="f full"><label for="fEvidence">4. Evidence <small>a figure, data point or citation</small></label><textarea id="fEvidence"></textarea></div>
+          <div class="f full"><label for="fRequest">5. Requested revision <small>what the authors should change or add</small></label><textarea id="fRequest"></textarea></div>
+          <div class="f"><label for="fTest">6. Testable hypothesis</label><textarea id="fTest"></textarea></div>
+          <div class="f"><label for="fConf">Confidence</label>
+            <select id="fConf"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+        </div>
+        <div class="copyrow" style="justify-content:flex-start">
+          <button class="btn primary" type="submit">Post review</button>
+        </div>
+        <p class="form-msg" id="formMsg" aria-live="polite"></p>
+      </form>
+      <div data-only="internal">
+        <p class="schema-h">What the pipeline receives</p>
+        <p class="schema-p">Each review becomes one record in this shape. The scorer, the hypothesis table and the author packet all read from it.</p>
+<pre class="schema">{
+  "review_id": "r-013",
+  "paper_id": "qz17-preprint",
+  "reviewer": {
+    "name": "string",
+    "verified": true,
+    "median_rcr": 1.6,
+    "topic_match": 0.70
+  },
+  "claim_id": "C1 | C2 | C3",
+  "stance": "support | challenge | question",
+  "point": "string",
+  "evidence": "string or null",
+  "requested_revision": "string or null",
+  "testable_hypothesis": "string or null",
+  "confidence": "low | medium | high",
+  "votes": { "up": 0, "down": 0 },
+  "scores": {
+    "expertise": 0, "topic": 0,
+    "substance": 0, "credibility": 0
+  },
+  "author_decision": "pending | accepted | declined"
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="hypH">
+    <div class="sec-h"><h2 id="hypH">Literature-to-hypothesis table</h2></div>
+    <p class="intro">Each claim’s bar shows credibility-weighted support (purple) against challenge (pink). The next hypothesis comes from the most credible review on that claim, so every row traces back to one named reviewer.</p>
+    <div class="tbl">
+      <table class="h">
+        <thead><tr><th>Claim</th><th>Weighted review</th><th>Status</th><th>Next testable hypothesis</th></tr></thead>
+        <tbody id="hypBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="expH">
+    <div class="sec-h">
+      <h2 id="expH">Revision packet for the authors</h2>
+      <div class="seg" role="group" aria-label="Export format" data-only="internal">
+        <button type="button" data-fmt="md" aria-pressed="true">Email (Markdown)</button>
+        <button type="button" data-fmt="json" aria-pressed="false">Pipeline (JSON)</button>
+      </div>
+    </div>
+    <p class="intro">Grouped by claim and ranked by credibility. In author view, accept or decline each review. Accepted reviewers are added to the paper’s author line with an asterisk.</p>
+    <div class="export-ctl">
+      <div class="slider">
+        <label for="thr">Include reviews with credibility of at least <span id="vThr"></span></label>
+        <input type="range" id="thr" min="0" max="90" step="5" value="50">
+      </div>
+      <span class="export-stats" id="expStats"></span>
+    </div>
+    <pre class="out" id="out"></pre>
+    <div class="copyrow">
+      <span class="copied" id="copied" aria-live="polite"></span>
+      <button class="btn primary" type="button" id="copy">Copy packet</button>
+    </div>
+  </section>
+
+  <section class="block limits" aria-labelledby="limH">
+    <div>
+      <h2 id="limH">What this doesn’t guarantee</h2>
+      <p>Quorum ranks who to listen to first. It does not decide what is true.</p>
+    </div>
+    <ul data-only="internal">
+      <li><b>Everything here is synthetic.</b> Seed RCR, topic match and substance values are pre-set. In production they come from NIH iCite (RCR), reviewer abstracts via Paperclip (topic match) and Claude (substance).</li>
+      <li><b>New reviews get a structure score, not a judgment.</b> In this demo, each filled evidence, specificity and hypothesis field adds 25 points, capped at 75. Claude’s substance review would replace this.</li>
+      <li><b>Votes measure popularity.</b> They are displayed so readers see the crowd’s reaction, but they never move the credibility score. The self-test shows why.</li>
+      <li><b>RCR is still citation-based.</b> It corrects for field size and career length, but well-known labs still get cited more, so a famous reviewer’s unsupported comment can still rank high.</li>
+      <li><b>Unverified reviewers are scored on their text alone.</b> That lets a strong student rise, but a well-written wrong review could too. They are always tagged.</li>
+      <li><b>Author credit is the author’s call.</b> Quorum records the decision and formats the asterisk. Journals set their own rules on what counts as authorship.</li>
+      <li><b>The self-test was written by our team.</b> Real validation needs a hold-out set labeled by independent domain experts.</li>
+    </ul>
+    <ul data-only="public">
+      <li><b>Credibility isn’t correctness.</b> A well-cited reviewer can still be wrong, so read the evidence.</li>
+      <li><b>New reviewers are scored on their writing alone</b> and are tagged as unverified.</li>
+      <li><b>Votes show popularity,</b> not quality, which is why they don’t affect ranking.</li>
+      <li><b>Credit is the authors’ call.</b> Journals set their own authorship rules.</li>
+    </ul>
+  </section>
+
+  <p class="foot">Built for the Claude Impact Lab, Track 2: in silico testing and discovery. All people, reviews and results on this page are fictional.</p>
+</div>
+
+<script>
+const INTERNAL = false;
+const CLAIMS = [
+  {id:'C1', text:'QZ-17 clears senescent cells in aged muscle, cutting p16-positive cells by 60%.'},
+  {id:'C2', text:'Clearance improves regeneration, increasing fiber cross-sectional area by 35%.'},
+  {id:'C3', text:'The benefit comes from restored muscle stem cell function, not reduced inflammation.'}
+];
+const AUTHORS = ['L. Moreno','K. Adeyemi','R. Tan'];
+
+// rcr/topic null = no publication record (cold start). checks = [evidence, specific, test]
+const SEED = [
+  {id:1,name:'Dr. Ana Okafor',role:'Muscle stem cell biologist',h:24,rcr:2.1,topic:.92,sub:.90,checks:[1,1,1],up:14,down:1,claim:'C3',stance:'challenge',conf:'high',label:'strong',
+   point:'Lower inflammation could explain the regeneration gain on its own, without any stem cell rescue.',
+   evidence:'Figure 4 shows lower IL-6 and TNF in treated muscle.',
+   request:'Add Pax7 lineage tracing and an anti-inflammatory control arm, or soften claim C3.',
+   test:'If QZ-17 works through stem cells, the regeneration gain persists against an anti-inflammatory control matched for IL-6 levels.'},
+  {id:2,name:'Priya Raman',role:'PhD student, senescence biology',h:0,rcr:null,topic:null,sub:.88,checks:[1,1,1],up:3,down:0,claim:'C1',stance:'challenge',conf:'high',label:'strong',
+   point:'p16 staining alone overcounts senescent cells.',
+   evidence:'Some activated macrophages express p16, and Figure 2 counts every p16-positive cell.',
+   request:'Co-stain for SA-β-gal and p21, and exclude F4/80-positive cells before counting.',
+   test:'The 60% reduction shrinks when p16 signal from F4/80-positive macrophages is excluded.'},
+  {id:3,name:'Dr. Tomas Lindqvist',role:'Geroscience lab lead',h:31,rcr:1.8,topic:.85,sub:.82,checks:[1,1,1],up:9,down:1,claim:'C2',stance:'support',conf:'medium',label:'strong',
+   point:'The effect size is plausible and in line with earlier senolytic studies in aged muscle.',
+   evidence:'Prior senolytic work in aged muscle reports gains of similar size, but this study uses only 6 mice per group.',
+   request:'Replicate in an independent cohort with blinded fiber measurement.',
+   test:'The fiber size gain replicates in a new cohort of at least 12 mice per group with blinded measurement.'},
+  {id:4,name:'Dr. Mei Chen',role:'Preclinical biostatistician',h:19,rcr:1.6,topic:.70,sub:.90,checks:[1,1,1],up:6,down:2,claim:'C2',stance:'challenge',conf:'high',label:'strong',
+   point:'Significance is inflated because fibers are treated as independent data points.',
+   evidence:'Methods: about 400 fibers per group from 6 mice, compared with a t-test.',
+   request:'Re-analyze with a mixed model using the mouse as the unit of analysis.',
+   test:'With the mouse as the unit of analysis, the C2 effect is no longer significant at p < 0.05.'},
+  {id:5,name:'Dr. Jordan Price',role:'Pharmacologist',h:14,rcr:1.4,topic:.60,sub:.70,checks:[1,1,1],up:5,down:0,claim:'C1',stance:'challenge',conf:'medium',label:'strong',
+   point:'Without exposure data, the effect could be systemic rather than local to muscle.',
+   evidence:'No tissue pharmacokinetic data are reported.',
+   request:'Measure QZ-17 concentration in muscle tissue during dosing.',
+   test:'QZ-17 concentration in muscle exceeds its in vitro EC50 during the dosing window.'},
+  {id:6,name:'Prof. Richard Hale',role:'Interventional cardiologist',h:98,rcr:1.2,topic:.22,sub:.30,checks:[0,0,0],up:41,down:6,claim:'C2',stance:'support',conf:'high',label:'weak',
+   point:'Impressive work. This will change the field of aging.',evidence:'',request:'',test:''},
+  {id:7,name:'Prof. Elena Voss',role:'Immunologist',h:76,rcr:2.4,topic:.40,sub:.25,checks:[0,1,0],up:22,down:9,claim:'C1',stance:'challenge',conf:'high',label:'wrong',
+   point:'Senescent cells cannot be cleared with a drug in a living animal, so this must be a staining artifact.',evidence:'',request:'Retract claim C1.',test:''},
+  {id:8,name:'@biohackerdan',role:'No publication record',h:0,rcr:null,topic:null,sub:.15,checks:[0,0,0],up:88,down:31,claim:'C2',stance:'support',conf:'high',label:'weak',
+   point:'Already on a senolytic stack and it works great lol. Where can I buy QZ-17?',evidence:'',request:'',test:''},
+  {id:9,name:'Dr. Kevin Marsh',role:'Translational medicine',h:45,rcr:0.9,topic:.55,sub:.35,checks:[0,0,0],up:12,down:10,claim:'C2',stance:'challenge',conf:'high',label:'weak',
+   point:'Mouse studies never translate. Pass.',evidence:'',request:'',test:''},
+  {id:10,name:'Sam Ortiz',role:'Postdoc, muscle physiology',h:6,rcr:1.1,topic:.80,sub:.45,checks:[0,0,1],up:4,down:0,claim:'C2',stance:'question',conf:'low',label:'weak',
+   point:'How does this compare to fisetin in the same injury model?',evidence:'',request:'Consider adding a fisetin comparison arm.',
+   test:'QZ-17 outperforms fisetin on fiber size in the same injury model.'},
+  {id:11,name:'Dr. Lisa Park',role:'Cell biologist',h:12,rcr:0.8,topic:.60,sub:.40,checks:[0,0,0],up:30,down:12,claim:'C2',stance:'challenge',conf:'medium',label:'weak',
+   point:'The stats look off to me.',evidence:'',request:'',test:''},
+  {id:12,name:'Prof. Alan Brooks',role:'Senescence lab lead',h:62,rcr:2.2,topic:.80,sub:.50,checks:[0,1,1],up:18,down:2,claim:'C1',stance:'support',conf:'high',label:'weak',
+   point:'Consistent with our lab’s experience with senolytics in muscle.',evidence:'',request:'',
+   test:'QZ-17 reduces senescence markers in muscle by a similar margin to other senolytics.'}
+];
+
+const REVIEWS = SEED.map(r=>({...r, my:0, decision:'pending', seed:true}));
+const DEFAULT_W = {E:35,T:35,S:30};
+let method='cred', view='reader', fmtMode='md', nextId=13;
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n);
+const fmt1 = n => (Math.round(n*10)/10).toFixed(1);
+const esc = s => String(s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const pad = n => 'r-'+String(n).padStart(3,'0');
+
+function weights(){
+  if(!INTERNAL) return {E:.35,T:.35,S:.30};
+  const e=+$('wE').value, t=+$('wT').value, s=+$('wS').value, sum=e+t+s||1;
+  return {E:e/sum, T:t/sum, S:s/sum};
+}
+function score(r,w){
+  const sub=r.sub*100;
+  if(r.rcr===null) return {total:sub,cold:true,exp:null,top:null,sub};
+  const exp=Math.min(r.rcr,3)/3*100, top=r.topic*100;
+  return {total:w.E*exp+w.T*top+w.S*sub,cold:false,exp,top,sub};
+}
+const net = r => r.up - r.down;
+function ranked(m,w,list=REVIEWS){
+  const arr=list.map(r=>({r,s:score(r,w)}));
+  const key={cred:x=>x.s.total,h:x=>x.r.h,votes:x=>net(x.r)}[m];
+  return arr.sort((a,b)=>key(b)-key(a)||b.s.total-a.s.total);
+}
+function hitsTop5(m,w){
+  return ranked(m,w,REVIEWS.filter(r=>r.seed)).slice(0,5).filter(x=>x.r.label==='strong').length;
+}
+
+const ARROW_UP='<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 3 3 11h4.5v6h5v-6H17z"/></svg>';
+const ARROW_DN='<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 17 3 9h4.5V3h5v6H17z"/></svg>';
+const NOTES = INTERNAL ? {
+  cred:'Ranked by credibility: field-normalized expertise, topic match and review substance.',
+  h:'Ranked by raw H-index, the way reputation usually works today. Watch who rises.',
+  votes:'Ranked by net votes (upvotes minus downvotes), the way Reddit and X surface replies.'
+} : {
+  cred:'Most credible reviews first: field expertise, topic match and review substance.',
+  votes:'Most upvoted reviews first. Popular isn’t always right.'
+};
+const VERB={support:'Supports',challenge:'Challenges',question:'Questions'};
+
+function renderAuthors(){
+  const acc=REVIEWS.filter(r=>r.decision==='accepted');
+  $('authors').innerHTML=AUTHORS.map(esc).join(', ')+(acc.length?', '+acc.map(r=>`<span class="ack">${esc(r.name)}*</span>`).join(', '):'');
+  $('ackNote').textContent=acc.length?'* Contributed accepted open review feedback through Quorum':'';
+}
+function field(label,val){
+  return `<dt>${label}</dt>`+(val?`<dd>${esc(val)}</dd>`:`<dd class="empty">Not provided</dd>`);
+}
+
+function renderFeed(w){
+  $('methodNote').textContent=NOTES[method];
+  $('feed').innerHTML=ranked(method,w).map((x,i)=>{
+    const r=x.r,s=x.s,n=net(r);
+    const checkNames=['Cites evidence','Targets a specific claim','Proposes a test'];
+    const checks=r.checks.map((v,j)=>`<span class="${v?'ok':''}">${v?'✓':'✗'} ${checkNames[j]}</span>`).join('');
+    const stats=INTERNAL&&r.rcr!==null?`<span>Median RCR ${r.rcr.toFixed(1)}</span><span>H-index ${r.h}</span>`:'';
+    const math=!INTERNAL?'':`<details class="math"><summary>Show the math</summary>`+(s.cold
+      ? `<table><tr><td>No publication record, so all weight moves to substance</td><td></td></tr>
+         <tr><td>Substance${r.seed?'':' (structure score, pending Claude review)'}</td><td>${fmt(s.sub)} × 100%</td></tr>
+         <tr class="tot"><td>Credibility</td><td>${fmt(s.total)}</td></tr></table>`
+      : `<table>
+         <tr><td>Expertise: RCR ${r.rcr.toFixed(1)}, capped at 3, scaled</td><td>${fmt(s.exp)} × ${fmt(w.E*100)}% = ${fmt1(s.exp*w.E)}</td></tr>
+         <tr><td>Topic match</td><td>${fmt(s.top)} × ${fmt(w.T*100)}% = ${fmt1(s.top*w.T)}</td></tr>
+         <tr><td>Substance</td><td>${fmt(s.sub)} × ${fmt(w.S*100)}% = ${fmt1(s.sub*w.S)}</td></tr>
+         <tr class="tot"><td>Credibility</td><td>${fmt(s.total)}</td></tr></table>`)+`</details>`;
+    const dec=r.decision==='accepted'?'<span class="chip accepted">Accepted by authors</span>':r.decision==='declined'?'<span class="chip declined">Declined by authors</span>':'';
+    const decideBtns=view==='author'?`<div class="decide">
+      <button class="btn accept" type="button" data-acc="${r.id}" aria-pressed="${r.decision==='accepted'}">Accept</button>
+      <button class="btn decline" type="button" data-dec="${r.id}" aria-pressed="${r.decision==='declined'}">Decline</button></div>`:'';
+    return `<li class="c ${i<5&&method==='cred'?'top':''} ${r.seed?'':'isnew'}">
+      <div class="vote">
+        <button class="up" type="button" data-up="${r.id}" aria-pressed="${r.my===1}" aria-label="Upvote">${ARROW_UP}</button>
+        <span class="net ${n>0?'pos':n<0?'neg':''}" aria-label="Net votes ${n}">${n}</span>
+        <button class="down" type="button" data-dn="${r.id}" aria-pressed="${r.my===-1}" aria-label="Downvote">${ARROW_DN}</button>
+      </div>
+      <div>
+        <div class="who"><strong>${esc(r.name)}</strong><span>${esc(r.role||'')}</span></div>
+        <div class="chips"><span class="chip ${r.stance}">${VERB[r.stance]} ${r.claim}</span>${r.rcr===null?'<span class="chip unv">Unverified, scored on text only</span>':''}${dec}</div>
+        <dl class="rv">
+          ${field('Point',r.point)}${field('Evidence',r.evidence)}${field('Requested revision',r.request)}${field('Testable hypothesis',r.test)}
+          <dt>Confidence</dt><dd>${r.conf[0].toUpperCase()+r.conf.slice(1)}</dd>
+        </dl>
+        <div class="meta">${stats}<span>${r.up} up, ${r.down} down</span></div>
+        <div class="meta" style="margin-top:4px">${checks}</div>
+        <div class="row-actions">${math}${decideBtns}</div>
+      </div>
+      <div class="score"><div class="rk">#${i+1}</div><div class="n">${fmt(s.total)}</div><div class="l">credibility</div></div>
+    </li>`;
+  }).join('');
+}
+
+function renderTests(w){
+  if(!INTERNAL) return;
+  const rows=[['cred','Credibility'],['h','Raw H-index'],['votes','Net votes']];
+  const res={};
+  $('tests').innerHTML=rows.map(([m,label])=>{
+    const n=hitsTop5(m,w); res[m]=n;
+    const dots=Array.from({length:5},(_,i)=>`<i class="${i<n?'hit':''}"></i>`).join('');
+    return `<div class="test-row ${m===method?'cur':''}"><span>${label}</span><span class="dots" aria-hidden="true">${dots}</span><span class="frac">${n}/5</span></div>`;
+  }).join('');
+  const intruder=ranked('cred',w,REVIEWS.filter(r=>r.seed)).slice(0,5).find(x=>x.r.label!=='strong');
+  $('testNote').textContent = res.cred===5
+    ? 'All 5 strong reviews make the top 5 at these weights. Remember the test set was written by our team.'
+    : intruder ? `Miss: ${intruder.r.name} reaches the top 5 on reputation and topic match with an unsupported review. Try raising substance.`
+    : 'Some strong reviews fall outside the top 5 at these weights.';
+}
+
+function hypRows(w){
+  return CLAIMS.map(cl=>{
+    const cs=REVIEWS.filter(r=>r.claim===cl.id).map(r=>({r,s:score(r,w)}));
+    const sup=cs.filter(x=>x.r.stance==='support').reduce((a,x)=>a+x.s.total,0);
+    const cha=cs.filter(x=>x.r.stance==='challenge').reduce((a,x)=>a+x.s.total,0);
+    const tot=sup+cha||1;
+    const status=cha>sup*1.25?'Contested':sup>cha*1.25?'Supported':'Split';
+    const best=cs.filter(x=>x.r.test).sort((a,b)=>b.s.total-a.s.total)[0];
+    return {cl,sup,cha,tot,status,best,n:cs.length};
+  });
+}
+function renderHyp(w){
+  $('hypBody').innerHTML=hypRows(w).map(r=>`<tr>
+    <td class="claimcell"><b>${r.cl.id}</b> ${r.cl.text}</td>
+    <td><div class="he" role="img" aria-label="Support ${fmt(r.sup/r.tot*100)} percent, challenge ${fmt(r.cha/r.tot*100)} percent"><div class="s" style="width:${r.sup/r.tot*100}%"></div><div class="x" style="width:${r.cha/r.tot*100}%"></div></div>
+      <span class="he-l">${fmt(r.sup/r.tot*100)}% support, ${fmt(r.cha/r.tot*100)}% challenge, ${r.n} reviews</span></td>
+    <td><span class="status ${r.status}">${r.status}</span></td>
+    <td class="nexthyp">${r.best?esc(r.best.r.test):'No testable proposal yet'}${r.best?`<span class="from">From ${esc(r.best.r.name)}, credibility ${fmt(r.best.s.total)}</span>`:''}</td>
+  </tr>`).join('');
+}
+
+function packet(w){
+  const thr=+$('thr').value;
+  const all=ranked('cred',w).filter(x=>x.s.total>=thr);
+  const acc=REVIEWS.filter(r=>r.decision==='accepted');
+  $('expStats').textContent=`${all.length} of ${REVIEWS.length} reviews included, ${acc.length} accepted`;
+  if(INTERNAL&&fmtMode==='json'){
+    return JSON.stringify({
+      paper_id:'qz17-preprint',
+      paper_title:'Senolytic compound QZ-17 restores muscle regeneration in aged mice',
+      authors:AUTHORS,
+      credited_reviewers:acc.map(r=>r.name+'*'),
+      weights:{expertise:+w.E.toFixed(2),topic:+w.T.toFixed(2),substance:+w.S.toFixed(2)},
+      min_credibility:thr,
+      reviews:all.map(x=>({
+        review_id:pad(x.r.id), paper_id:'qz17-preprint',
+        reviewer:{name:x.r.name,verified:x.r.rcr!==null,median_rcr:x.r.rcr,topic_match:x.r.topic},
+        claim_id:x.r.claim, stance:x.r.stance, point:x.r.point,
+        evidence:x.r.evidence||null, requested_revision:x.r.request||null, testable_hypothesis:x.r.test||null,
+        confidence:x.r.conf, votes:{up:x.r.up,down:x.r.down},
+        scores:{expertise:x.s.exp===null?null:fmt(x.s.exp),topic:x.s.top===null?null:fmt(x.s.top),substance:fmt(x.s.sub),credibility:fmt(x.s.total)},
+        author_decision:x.r.decision
+      }))
+    },null,2);
+  }
+  let md=`Subject: Open review feedback for "Senolytic compound QZ-17 restores muscle regeneration in aged mice"\n\n`;
+  md+=`Dear ${AUTHORS.join(', ')},\n\n`;
+  md+=`Here are the ${all.length} public reviews of your preprint with a credibility score of ${thr} or higher, grouped by claim and ranked by credibility. `;
+  md+=INTERNAL?`Scores weight field-normalized expertise ${fmt(w.E*100)}%, topic match ${fmt(w.T*100)}% and review substance ${fmt(w.S*100)}%. `:`Credibility combines field expertise, topic match and review substance. `;
+  md+=`Votes are listed for context only.\n\n`;
+  md+=`If you accept a review and revise the paper based on it, that reviewer will be listed in the author line with an asterisk.\n`;
+  CLAIMS.forEach(cl=>{
+    const items=all.filter(x=>x.r.claim===cl.id);
+    md+=`\n## ${cl.id}: ${cl.text}\n`;
+    if(!items.length){md+=`\nNo reviews above the threshold.\n`;return;}
+    items.forEach((x,i)=>{
+      const r=x.r;
+      md+=`\n### ${i+1}. ${VERB[r.stance]}, from ${r.name}${r.role?` (${r.role})`:''}\n`;
+      md+=`Credibility ${fmt(x.s.total)}${r.rcr===null?', unverified reviewer':(INTERNAL?`, median RCR ${r.rcr.toFixed(1)}`:'')}. Votes: ${r.up} up, ${r.down} down. Confidence: ${r.conf}. Decision: ${r.decision}.\n\n`;
+      md+=`- Point: ${r.point}\n- Evidence: ${r.evidence||'Not provided'}\n- Requested revision: ${r.request||'Not provided'}\n- Testable hypothesis: ${r.test||'Not provided'}\n`;
+    });
+  });
+  md+=`\n## Credited reviewers\n\n${acc.length?acc.map(r=>`- ${r.name}*`).join('\n'):'None accepted yet.'}\n\n* Contributed accepted open review feedback through Quorum.\n`;
+  return md;
+}
+function renderExport(w){
+  $('vThr').textContent=$('thr').value;
+  $('out').textContent=packet(w);
+}
+
+function render(){
+  const w=weights();
+  if(INTERNAL){$('vE').textContent=fmt(w.E*100)+'%'; $('vT').textContent=fmt(w.T*100)+'%'; $('vS').textContent=fmt(w.S*100)+'%';}
+  renderAuthors(); renderFeed(w); renderTests(w); renderHyp(w); renderExport(w);
+}
+
+function vote(id,dir){
+  const r=REVIEWS.find(x=>x.id===id); if(!r) return;
+  if(r.my===1) r.up--; if(r.my===-1) r.down--;
+  r.my = r.my===dir ? 0 : dir;
+  if(r.my===1) r.up++; if(r.my===-1) r.down++;
+  render();
+}
+function decide(id,d){
+  const r=REVIEWS.find(x=>x.id===id); if(!r) return;
+  r.decision = r.decision===d ? 'pending' : d;
+  render();
+}
+$('feed').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.up) vote(+b.dataset.up,1);
+  else if(b.dataset.dn) vote(+b.dataset.dn,-1);
+  else if(b.dataset.acc) decide(+b.dataset.acc,'accepted');
+  else if(b.dataset.dec) decide(+b.dataset.dec,'declined');
+});
+
+function bindSeg(attr,cb){
+  document.querySelectorAll(`.seg button[data-${attr}]`).forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll(`.seg button[data-${attr}]`).forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+    cb(b.dataset[attr]); render();
+  }));
+}
+bindSeg('m',v=>method=v);
+bindSeg('view',v=>view=v);
+bindSeg('fmt',v=>fmtMode=v);
+$('thr').addEventListener('input',render);
+if(INTERNAL){
+  ['wE','wT','wS'].forEach(id=>$(id).addEventListener('input',render));
+  $('reset').addEventListener('click',()=>{$('wE').value=DEFAULT_W.E;$('wT').value=DEFAULT_W.T;$('wS').value=DEFAULT_W.S;render();});
+}
+
+$('fClaim').innerHTML+=CLAIMS.map(c=>`<option value="${c.id}">${c.id}: ${c.text}</option>`).join('');
+$('rform').addEventListener('submit',e=>{
+  e.preventDefault();
+  const v=id=>$(id).value.trim();
+  const msg=$('formMsg');
+  const missing=[];
+  if(!v('fName')) missing.push('your name');
+  if(!v('fClaim')) missing.push('the claim you are reviewing');
+  if(!v('fPoint')) missing.push('your point');
+  if(missing.length){msg.className='form-msg err';msg.textContent='Add '+missing.join(', ')+' to post this review.';return;}
+  const evidence=v('fEvidence'), request=v('fRequest'), test=v('fTest'), point=v('fPoint');
+  const checks=[evidence?1:0, point.length>=40?1:0, test?1:0];
+  const sub=Math.min(75, checks.reduce((a,b)=>a+b,0)*25)/100;
+  REVIEWS.push({id:nextId++,name:v('fName'),role:v('fRole'),h:0,rcr:null,topic:null,sub,checks,
+    up:1,down:0,my:1,claim:v('fClaim'),stance:document.querySelector('input[name="stance"]:checked').value,
+    conf:v('fConf'),point,evidence,request,test,decision:'pending',seed:false,label:null});
+  $('rform').reset();
+  msg.className='form-msg ok';
+  msg.textContent=(INTERNAL?`Posted with a structure score of ${fmt(sub*100)}. `:'Posted. ')+'Your review is highlighted in green in the feed.';
+  render();
+});
+
+$('copy').addEventListener('click',async()=>{
+  const txt=$('out').textContent;
+  try{await navigator.clipboard.writeText(txt);$('copied').textContent='Copied';}
+  catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');$('copied').textContent='Copied';}catch(_){$('copied').textContent='Copy failed';}ta.remove();}
+  setTimeout(()=>$('copied').textContent='',2000);
+});
+
+$('claimList').innerHTML=CLAIMS.map(c=>`<div class="claim"><b>${c.id}</b><p>${c.text}</p></div>`).join('');
+render();
+</script>
+</body>
+</html>
